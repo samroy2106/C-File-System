@@ -4,8 +4,6 @@ Please go through this document for instructions and a general overview.
 Read report.txt for design and implementation details.
 Finally, go through File.c and its comments for the implementation logic (which is okay at high level, but the C granularity causes minute misinterpretations, leading to seg faults)
 
-
-Submission:
 -	All relevant code is contained in the file_system folder
 -	file_system contains the following:
 		1. apps folder (contains test01.c, test02.c, test03.c and test04.c)
