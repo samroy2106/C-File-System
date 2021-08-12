@@ -1,0 +1,55 @@
+Samarth Roy
+
+Please go through this document for instructions and a general overview.
+Read report.txt for design and implementation details.
+Finally, go through File.c and its comments for the implementation logic (which is okay at high level, but the C granularity causes minute misinterpretations, leading to seg faults)
+
+
+Submission:
+-	All relevant code is contained in the file_system folder
+-	file_system contains the following:
+		1. apps folder (contains test01.c, test02.c, test03.c and test04.c)
+		2. disk folder (contains diskdriver.c, diskdriver.h and vdisk (when its created via tests in apps))
+		3. io folder (contains File.c and File.h)
+		4. Makefile (used to compile all the code present in this directory at once)
+		5. report.txt (Describes the design and tradeoffs of the file_system)
+		6. This README.txt file
+-	An additional file called noSegFaults.c is included separately. This file is a snapshot of File.c
+	from when I was in the midst of debugging to remove seg faults. Unfortunately, I did not have enough time to iron out all the errors but I included this file just to give you an idea of how I was going about debugging, and it manages to pass test02 (more on this ahead) without a seg fault and had a bunch of printfs to check functionality. To run this version, simply rename it to File.c and replace File.c in /io in the file_system.
+
+
+How to compile:
+- Just do 'make all' while in the file_system directory
+- Do 'make clean' to destroy all .o files and then 'make all' to do a fresh compile
+
+
+How to test:
+-	In the apps directory, after compiling, run the following test files that demonstrate different functionalies of the file system (each file has brief comments that describe how it addresses an assignement goal):
+		1. test01.c - addresses goal 1 (passes, vdisk is formatted with my LLFS)
+		2. test02.c - addresses goal 2a (fails, segmentation fault)
+		3. test03.c	- addresses goal 2b (fails, segmentation fault)
+		4. test04.c - addresses goal 2c (fails, segmentation fault)
+
+
+High-level features coded:
+	1. The ability to format vdisk my version of the LLFS.
+	2. The ability to create a file in any directory (root/sub directory), given the file name, its contents, and the path at which to create it (for creation of files in the root directory, just specify path to be "/").
+	3. The abilty to create sub directories at root level or deeper, upto a depth of 4 (with root being depth 1).
+
+
+Features not implemented:
+	1. The readFile(filename, path) function which reads and displays a file to console - It was left for when the createFile() and createDirectory() functions were working, as they had higher priority. Another reason it was left for later is that it would be relatively easy to write once everything else was in place as a lot of the logic could be repurposed to write it. (OpenDir(path) > pull Inode at returned index > get the inode index for the file from the blocks of the directory inode > print contents of blocks pointed to by the inode after first transfering them to a buffer; exception message if file not found)
+	2. deleteFile() - could not reach a point at which it was feasible to implement it and have it working.
+	3. logging mechanism/ robustness feature - could not reach a point at which it was feasible to implement it and have it working.
+
+
+Note: At this point, please read report.txt and come back to this document so that function names mentioned below make sense.
+
+Problems with the code:
+-	Even thought the high level logic is sound, the implementation of many functions need amendments to remove seg faults for the all the tests to be able to pass, something I
+	did not have enough time for :(
+		1. Seg fault in openDirectory() for the case when directory to be opened is not root
+		2. Seg fault in allocInodeForDir()
+		3. Seg fault in the loop part of makeDirectoryEntry()
+		4. The above faults (1, 2, 3) compound to break createFile(), which has further call to atleast one more function that seg faults
+		5. Similar compounding as for createFile() (4) happens for createDirectory()

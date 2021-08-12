@@ -1,0 +1,70 @@
+Samarth Roy
+
+Design details for my version of the file system:
+-	The file system resides on a virtual disk, 'vdisk' which is essentially just a file in the 'disk' directory of our file system. It is created/formatted everytime the file
+	system is initialized for use.
+-	vdisk size: ~ 2MB (4096 blocks of 512 bytes each)
+-	Block 0 - Superblock (magicNumber: 42, numBlocks: 4096, numInodes: 128)
+-	Block 1 - FreeBlockVector (512 bytes * 8 = 4096 bits, 1 for each block) (1 is occupied, 0 is free)
+- 	Block 2 - FreeInodeList (use the first 128 bytes to store the status of inodes as 0x00 (free) and 0x01 (occupied)) (the first inode index (0) is always occupied by the root dir)
+-	Blocks 3-9 - Unused but marked as oocupied in the freeBlockVector
+-	Blocks 10-17 - Blocks allocated to store inodes for all files and directories. First inode (index 0) stores the root directory.
+	(blockSize(512)/inodeSize(32) * 8(numBlocks) = 128(numInodes))
+-	Blocks 18-4095 - blocks available for file/directory data storage.
+
+-	Inodes:
+	- 32 bytes in size (first 4 bytes is size, next 4 is flag (file/ dir), next 10 are direct block pointers and the last 2 are indirect block pointers (unused))
+	- File inode direct block pointers store the indices of blocks that contain file data
+	- Directory inode direct block pointers store the indices of blocks that contain directory entries
+
+-	Directory Entries on blocks:
+	- Each entry is 32 bytes long (1st byte is the index at which the file/directory inode specfied by the entry string is stored; the rest 31 bytes is the entry string)
+	- Blocks that store directory entries are exclusive to storing them. There can be 16 entries per block. If a block is fully written, a new block is allocated for the entries
+		and its index is written to the next direct block pointer in the directory inode.
+	- The main reason to pick the number of inodes to be 128 was that the first bytes has the range to represent 0-128. Could have used usigned char to have 255 inodes but had
+		already made the design decision.
+	- If in an entry, the directoryIndex is 0, that means that its an empty directory for which an inode is yet to be allocated.
+
+-	Can create empty files. Unlike emtpy directories, an inode is allocated even if the file is empty. Will just show up as empty when read.
+-	All paths specified must be absolute. (Use "/" for root)
+-	File names may or may not have extensions
+
+
+The rest of this report goes over 2 files, diskdriver.c and File.c, with a heavy emphasis on File.c.
+
+1. diskdriver.c - contains 2 simple methods readBlock() and writeBlock() and acts like a diskdriver on our vdisk to read and write specified blocks.
+2. File.c - contains the complete implementation of the file system.
+
+
+Functions implemented in File.c:
+1.  initLLFS - initializes the file system (works fine)
+2.  initSuperBlock - initializes the superblock (works fine)
+3.  initFreeBlockVector - initializes the freeblockector (works fine)
+4.  initRootDirectory - initializes the rootDirectory (works fine)
+5.  initFreeInodeList - initializes the freeInodeList (works fine)
+6.  findFreeInode - finds the next free inode index in the inode list and returns it (works fine)
+7.  createInode - create an inode with the given specifications (works fine)
+8.  updateFreeInodeList - updates the index of an inode on the freeinodelist (works fine)
+9.  openDirectory - open the directory specfied by the path (seg faults somewhere in looping logic)
+10. allocInodeForEmptyDirectory - allocate an inode for an empty directory as an entry needs to be made in it (seg fault)
+11. makeDirectoryEntry - make the directory entry of the file/directory name and index on a block pointed to by a direct block pointer in the directory inode of
+	directory specified by path (seg fault)
+12. findFreeBlocks - find the number of free blocks requested and return their indices in an int array (seg fault)
+13. updateFreeBlockVector - updates the status of a block (free/occupied) in the freeblockvector by flipping the bit specified by the index passed (seg fault)
+14. createFile - enlists the help of most functions above to create a file (doesn't work due to cumulative failure)
+15. createDirectory - enlists the help of most functions above to create a directory (doesn't work due to cumulative failure)
+
+Please note that even though there is a significant amount of seg faults, the design and logic for the system holds well. It is my programming ability in C that has let me down here.
+Nevertheless, I am certain that roughy a day and a half of debugging would yeild a working file system.
+
+
+Restrictions:
+1. Due to the design choice of using only direct block pointers in inodes, max filesize in 5120 bytes.
+2. File and directory names cannot be longer than 30 btyes (excluding the null terminator).
+3. File and directory names cannot be the same. (Not enforced in the code, something assumed to be enforced by the user).
+
+
+Tradeoffs:
+1. Not using indirect blocks restricts filesize to 5120 bytes.
+2. Not implementing a logging feature prevents the system from being able to restore the disk state in the event of a crash.
+3. Though negligible for such a small disk, that to virtual, disk fragmentation causes increase in seek time on use over time.
